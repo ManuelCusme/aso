@@ -1,3 +1,90 @@
+<!--
+Paso 1: Comandos de creación del proyecto y terminal...
+1) Instalar dependencias base:
+   - Composer, PHP >= 8.2, MySQL, Node.js y npm.
+2) Crear el proyecto Laravel:
+   - composer create-project laravel/laravel mi_api
+3) Entrar al proyecto:
+   - cd mi_api
+
+Paso 2: Configuración del .env...
+1) Copiar variables de entorno:
+   - cp .env.example .env
+2) Ajustar conexión MySQL en .env:
+   - DB_CONNECTION=mysql
+   - DB_HOST=127.0.0.1
+   - DB_PORT=3306
+   - DB_DATABASE=mi_api
+   - DB_USERNAME=root
+   - DB_PASSWORD=tu_password
+3) Generar clave de aplicación:
+   - php artisan key:generate
+
+Paso 3: Comandos artisan (models, migrations, controllers, api)...
+1) Crear modelos con migración y factory:
+   - php artisan make:model Categoria -m
+   - php artisan make:model Producto -m
+2) Crear controladores API con métodos resource:
+   - php artisan make:controller Api/CategoriaController --api
+   - php artisan make:controller Api/ProductoController --api
+3) Ejecutar migraciones:
+   - php artisan migrate
+
+Paso 4: Código de las migraciones...
+1) database/migrations/xxxx_xx_xx_create_categorias_table.php
+   Schema::create('categorias', function (Blueprint $table) {
+       $table->id();
+       $table->string('nombre');
+       $table->timestamps();
+   });
+2) database/migrations/xxxx_xx_xx_create_productos_table.php
+   Schema::create('productos', function (Blueprint $table) {
+       $table->id();
+       $table->string('nombre');
+       $table->decimal('precio', 10, 2);
+       $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade');
+       $table->timestamps();
+   });
+
+Paso 5: Código de los Modelos...
+1) app/Models/Categoria.php
+   class Categoria extends Model {
+       protected $fillable = ['nombre'];
+       public function productos() {
+           return $this->hasMany(Producto::class);
+       }
+   }
+2) app/Models/Producto.php
+   class Producto extends Model {
+       protected $fillable = ['nombre', 'precio', 'categoria_id'];
+       public function categoria() {
+           return $this->belongsTo(Categoria::class);
+       }
+   }
+
+Paso 6: Código de los Controladores...
+1) CategoriaController: index, store, show, update, destroy.
+   - index: return Categoria::with('productos')->get();
+   - store: return Categoria::create($request->validate(['nombre' => 'required|string|max:255']));
+2) ProductoController: index, store, show, update, destroy.
+   - store: validar nombre, precio y categoria_id existente.
+   - show por nombre (opcional): Producto::where('nombre', $nombre)->first();
+
+Paso 7: Código de routes/api.php...
+use App\Http\Controllers\Api\CategoriaController;
+use App\Http\Controllers\Api\ProductoController;
+
+Route::apiResource('categorias', CategoriaController::class);
+Route::apiResource('productos', ProductoController::class);
+Route::get('productos/buscar/{nombre}', [ProductoController::class, 'buscarPorNombre']);
+
+Paso 8: Comando para levantar el servidor...
+1) Iniciar Laravel:
+   - php artisan serve
+2) URL local por defecto:
+   - http://127.0.0.1:8000
+======================================================================
+-->
 <!DOCTYPE html>
 <html>
 <head>
