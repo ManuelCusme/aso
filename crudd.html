@@ -1,89 +1,292 @@
 <!--
-Paso 1: Comandos de creación del proyecto y terminal...
-1) Instalar dependencias base:
-   - Composer, PHP >= 8.2, MySQL, Node.js y npm.
-2) Crear el proyecto Laravel:
-   - composer create-project laravel/laravel mi_api
-3) Entrar al proyecto:
-   - cd mi_api
+Paso 0: Crear manualmente la base de datos MySQL/phpMyAdmin `practica`.
+CREATE DATABASE practica;
 
-Paso 2: Configuración del .env...
-1) Copiar variables de entorno:
-   - cp .env.example .env
-2) Ajustar conexión MySQL en .env:
-   - DB_CONNECTION=mysql
-   - DB_HOST=127.0.0.1
-   - DB_PORT=3306
-   - DB_DATABASE=mi_api
-   - DB_USERNAME=root
-   - DB_PASSWORD=tu_password
-3) Generar clave de aplicación:
-   - php artisan key:generate
+Paso 1: Crear el proyecto Laravel y entrar a la carpeta.
+composer create-project laravel/laravel practica
+cd practica
 
-Paso 3: Comandos artisan (models, migrations, controllers, api)...
-1) Crear modelos con migración y factory:
-   - php artisan make:model Categoria -m
-   - php artisan make:model Producto -m
-2) Crear controladores API con métodos resource:
-   - php artisan make:controller Api/CategoriaController --api
-   - php artisan make:controller Api/ProductoController --api
-3) Ejecutar migraciones:
-   - php artisan migrate
+Paso 2: Configuración `.env` para MySQL local (DB_DATABASE=practica).
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=practica
+DB_USERNAME=root
+DB_PASSWORD=
 
-Paso 4: Código de las migraciones...
-1) database/migrations/xxxx_xx_xx_create_categorias_table.php
-   Schema::create('categorias', function (Blueprint $table) {
-       $table->id();
-       $table->string('nombre');
-       $table->timestamps();
-   });
-2) database/migrations/xxxx_xx_xx_create_productos_table.php
-   Schema::create('productos', function (Blueprint $table) {
-       $table->id();
-       $table->string('nombre');
-       $table->decimal('precio', 10, 2);
-       $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade');
-       $table->timestamps();
-   });
+Paso 3: Comandos artisan y migración.
+php artisan make:model Autor -mcr
+php artisan make:model Libro -mcr
+php artisan install:api
+php artisan migrate
 
-Paso 5: Código de los Modelos...
-1) app/Models/Categoria.php
-   class Categoria extends Model {
-       protected $fillable = ['nombre'];
-       public function productos() {
-           return $this->hasMany(Producto::class);
-       }
-   }
-2) app/Models/Producto.php
-   class Producto extends Model {
-       protected $fillable = ['nombre', 'precio', 'categoria_id'];
-       public function categoria() {
-           return $this->belongsTo(Categoria::class);
-       }
-   }
+Paso 4: Código exacto de las migraciones existentes.
 
-Paso 6: Código de los Controladores...
-1) CategoriaController: index, store, show, update, destroy.
-   - index: return Categoria::with('productos')->get();
-   - store: return Categoria::create($request->validate(['nombre' => 'required|string|max:255']));
-2) ProductoController: index, store, show, update, destroy.
-   - store: validar nombre, precio y categoria_id existente.
-   - show por nombre (opcional): Producto::where('nombre', $nombre)->first();
+MIGRACION: database/migrations/..._create_autors_table.php
+public function up(): void
+{
+    Schema::create('autors', function (Blueprint $table) {
+        $table->id();
+        $table->string("Nombre");
+        $table->string("Apellido");
+        $table->string("Telefono");
+        $table->timestamps();
+    });
+}
 
-Paso 7: Código de routes/api.php...
-use App\Http\Controllers\Api\CategoriaController;
-use App\Http\Controllers\Api\ProductoController;
+MIGRACION: database/migrations/..._create_libros_table.php
+public function up(): void
+{
+    Schema::create('libros', function (Blueprint $table) {
+        $table->id();
+        $table->string("Nombre");
+        $table->integer("Paginas");
+        $table->foreignId("autor_id")->constrained()->onDelete('cascade');
+        $table->timestamps();
+    });
+}
 
-Route::apiResource('categorias', CategoriaController::class);
-Route::apiResource('productos', ProductoController::class);
-Route::get('productos/buscar/{nombre}', [ProductoController::class, 'buscarPorNombre']);
+Paso 5: Código exacto de los modelos existentes.
 
-Paso 8: Comando para levantar el servidor...
-1) Iniciar Laravel:
-   - php artisan serve
-2) URL local por defecto:
-   - http://127.0.0.1:8000
-======================================================================
+MODELO: app/Models/Autor.php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Autor extends Model
+{
+    protected $fillable = ["Nombre","Apellido","Telefono"];
+
+    public function libros(){
+        return $this->hasMany(Libro::class);
+    }
+}
+
+MODELO: app/Models/Libro.php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Libro extends Model
+{
+    protected $fillable = ["Nombre","Paginas","autor_id"];
+
+    public function autor(){
+       return $this->belongsTo(Autor::class);
+    }
+}
+
+Paso 6: Código completo y exacto de `AutorController` y `LibroController`.
+
+CONTROLLER: app/Http/Controllers/AutorController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Autor;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class AutorController extends Controller
+{
+    // GET /autor
+    public function index()
+    {
+        $autores = Autor::all();
+        return response()->json($autores);
+    }
+
+    // POST /autor
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => 'required',
+            "Apellido" => 'required',
+            "Telefono" => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                "message" => "Error al crear un autor",
+                "errors" => $validator->errors(),
+                "status" => 400
+            ], 400);
+        }
+
+        $autor = Autor::create([
+            "Nombre" => $request->Nombre,
+            "Apellido" => $request->Apellido,
+            "Telefono" => $request->Telefono,
+        ]);
+
+        return response()->json(["autor" => $autor, "status" => 201], 201);
+    }
+
+    // GET /autor/{nombre}
+    public function show($nombre)
+    {
+        $autores = Autor::where('Nombre', $nombre)->first();
+
+        if (!$autores) {
+            return response()->json(['message' => 'Error no se encontro al autor', 'status' => 404], 404);
+        }
+
+        return response()->json(['autores' => $autores, 'status' => 200], 200);
+    }
+
+    // PUT /autor/{autor}
+    public function update(Request $request, Autor $autor)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => 'required',
+            "Apellido" => 'required',
+            "Telefono" => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "message" => "Error al validar los datos",
+                "errors" => $validator->errors(),
+                "status" => 401
+            ], 401);
+        }
+
+        $autor->Nombre = $request->Nombre;
+        $autor->Apellido = $request->Apellido;
+        $autor->Telefono = $request->Telefono;
+        $autor->save();
+
+        return response()->json(["message" => "Autor actualizado", "autores" => $autor, "status" => 201], 201);
+    }
+
+    // DELETE /autor/{autor}
+    public function destroy(Autor $autor)
+    {
+        $autor->delete();
+        return response()->json(["message" => "Autor eliminado correctamente", "status" => 204], 204);
+    }
+}
+
+CONTROLLER: app/Http/Controllers/LibroController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Autor;
+use App\Models\Libro;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class LibroController extends Controller
+{
+    // GET /libro
+    public function index()
+    {
+        $libro = Libro::all();
+        return response()->json(["libro" => $libro, "status" => 200], 200);
+    }
+
+    // POST /libro
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => "required",
+            "Paginas" => "required",
+            "autor_id" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(["message" => "Error al validar los datos", "errors" => $validator->errors(), "status" => 401], 401);
+        }
+
+        $autor = Autor::find($request->autor_id);
+        if (!$autor) {
+            return response()->json(["message" => "El autor no existe", "status" => 404], 404);
+        }
+
+        $libro = Libro::create([
+            "Nombre" => $request->Nombre,
+            "Paginas" => $request->Paginas,
+            "autor_id" => $request->autor_id,
+        ]);
+
+        return response()->json(["message" => "Libro creado correctamente", "libros" => $libro, "status" => 201], 201);
+    }
+
+    // GET /libro/{nombre}
+    public function show($nombre)
+    {
+        $libro = Libro::where("Nombre", $nombre)->first();
+
+        if (!$libro) {
+            return response()->json(["message" => "Libro no encontrado", "status" => 404], 404);
+        }
+
+        return response()->json(["libros" => $libro, "status" => 200], 200);
+    }
+
+    // PUT /libro/{libro}
+    public function update(Request $request, Libro $libro)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => "required",
+            "Paginas" => "required",
+            "autor_id" => "required",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(["message" => "Error al validar los datos", "errors" => $validator->errors(), "status" => 400], 400);
+        }
+
+        $autor = Autor::find($request->autor_id);
+        if (!$autor) {
+            return response()->json(["message" => "El autor no existe", "status" => 400], 400);
+        }
+
+        $libro->Nombre = $request->Nombre;
+        $libro->Paginas = $request->Paginas;
+        $libro->autor_id = $request->autor_id;
+        $libro->save();
+
+        return response()->json(["message" => "Libro actualizado correctamente", "libros" => $libro, "status" => 200], 200);
+    }
+
+    // DELETE /libro/{libro}
+    public function destroy(Libro $libro)
+    {
+        $libro->delete();
+        return response()->json(["message" => "Libro eliminado correctamente", "libro" => $libro, "status" => 204], 204);
+    }
+}
+
+Paso 7: Código exacto de `routes/api.php` existente.
+
+<?php
+
+use App\Http\Controllers\AutorController;
+use App\Http\Controllers\LibroController;
+use Illuminate\Support\Facades\Route;
+
+//AUTORES
+Route::get('/autor',[AutorController::class,'index']);
+Route::post('/autor',[AutorController::class,'store']);
+Route::get('/autor/{nombre}', [AutorController::class, 'show']);
+Route::delete('/autor/{autor}',[AutorController::class,'destroy']);
+Route::put('/autor/{autor}',[AutorController::class,'update']);
+
+//LIBROS
+Route::get('/libro',[LibroController::class,'index']);
+Route::post('/libro',[LibroController::class,'store']);
+Route::get('/libro/{nombre}',[LibroController::class,'show']);
+Route::put('/libro/{libro}',[LibroController::class,'update']);
+Route::delete('/libro/{libro}',[LibroController::class,'destroy']);
+
+Paso 8: Levantar el servidor.
+php artisan serve
 -->
 <!DOCTYPE html>
 <html>
