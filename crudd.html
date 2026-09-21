@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CRUD</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+<style>
+table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+pre { padding: 12px; border-radius: 6px; overflow-x: auto; }
+</style>
+</head>
+<body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h3>Crear autor</h3>
+<input id="autorNombre" placeholder="Nombre">
+<input id="autorApellido" placeholder="Apellido">
+<input id="autorTelefono" placeholder="Telefono">
+<button onclick="crearAutor()">Crear</button>
+
+<h3>Autores</h3>
+<table id="tablaAutores">
+<tr><th>ID</th><th>Nombre</th><th>Apellido</th><th>Telefono</th></tr>
+</table>
+
+<h3>Buscar autor por nombre</h3>
+<input id="buscarAutorNombre" placeholder="Nombre">
+<button onclick="buscarAutor()">Buscar</button>
+<p id="resultadoAutor"></p>
+
+<h3>Actualizar autor</h3>
+<input id="updateAutorId" placeholder="id">
+<input id="updateAutorNombre" placeholder="Nombre">
+<input id="updateAutorApellido" placeholder="Apellido">
+<input id="updateAutorTelefono" placeholder="Telefono">
+<button onclick="actualizarAutor()">Actualizar</button>
+
+<h3>Eliminar autor</h3>
+<input id="deleteAutorId" placeholder="id">
+<button onclick="eliminarAutor()">Eliminar</button>
+
+<hr>
+
+<h3>Crear libro</h3>
+<input id="libroNombre" placeholder="Nombre">
+<input id="libroPaginas" placeholder="Paginas">
+<input id="libroAutorId" placeholder="autor_id">
+<button onclick="crearLibro()">Crear</button>
+
+<h3>Libros</h3>
+<table id="tablaLibros">
+<tr><th>ID</th><th>Nombre</th><th>Paginas</th><th>autor_id</th></tr>
+</table>
+
+<h3>Buscar libro por nombre</h3>
+<input id="buscarLibroNombre" placeholder="Nombre">
+<button onclick="buscarLibro()">Buscar</button>
+<p id="resultadoLibro"></p>
+
+<h3>Actualizar libro</h3>
+<input id="updateLibroId" placeholder="id">
+<input id="updateLibroNombre" placeholder="Nombre">
+<input id="updateLibroPaginas" placeholder="Paginas">
+<input id="updateLibroAutorId" placeholder="autor_id">
+<button onclick="actualizarLibro()">Actualizar</button>
+
+<h3>Eliminar libro</h3>
+<input id="deleteLibroId" placeholder="id">
+<button onclick="eliminarLibro()">Eliminar</button>
+
+<script>
+const API = "http://127.0.0.1:8000/api";
+
+function cargarAutores() {
+  fetch(API + "/autor").then(r => r.json()).then(data => {
+    const tabla = document.getElementById("tablaAutores");
+    tabla.innerHTML = "<tr><th>ID</th><th>Nombre</th><th>Apellido</th><th>Telefono</th></tr>";
+    data.forEach(a => {
+      tabla.innerHTML += "<tr><td>" + a.id + "</td><td>" + a.Nombre + "</td><td>" + a.Apellido + "</td><td>" + a.Telefono + "</td></tr>";
+    });
+  });
+}
+
+function crearAutor() {
+  fetch(API + "/autor", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      Nombre: document.getElementById("autorNombre").value,
+      Apellido: document.getElementById("autorApellido").value,
+      Telefono: document.getElementById("autorTelefono").value
+    })
+  }).then(() => cargarAutores());
+}
+
+function buscarAutor() {
+  const nombre = document.getElementById("buscarAutorNombre").value;
+  fetch(API + "/autor/" + nombre).then(r => r.json()).then(data => {
+    document.getElementById("resultadoAutor").innerText = JSON.stringify(data);
+  });
+}
+
+function actualizarAutor() {
+  const id = document.getElementById("updateAutorId").value;
+  fetch(API + "/autor/" + id, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      Nombre: document.getElementById("updateAutorNombre").value,
+      Apellido: document.getElementById("updateAutorApellido").value,
+      Telefono: document.getElementById("updateAutorTelefono").value
+    })
+  }).then(() => cargarAutores());
+}
+
+function eliminarAutor() {
+  const id = document.getElementById("deleteAutorId").value;
+  fetch(API + "/autor/" + id, { method: "DELETE" }).then(() => cargarAutores());
+}
+
+function cargarLibros() {
+  fetch(API + "/libro").then(r => r.json()).then(data => {
+    const tabla = document.getElementById("tablaLibros");
+    tabla.innerHTML = "<tr><th>ID</th><th>Nombre</th><th>Paginas</th><th>autor_id</th></tr>";
+    data.libro.forEach(l => {
+      tabla.innerHTML += "<tr><td>" + l.id + "</td><td>" + l.Nombre + "</td><td>" + l.Paginas + "</td><td>" + l.autor_id + "</td></tr>";
+    });
+  });
+}
+
+function crearLibro() {
+  fetch(API + "/libro", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      Nombre: document.getElementById("libroNombre").value,
+      Paginas: document.getElementById("libroPaginas").value,
+      autor_id: document.getElementById("libroAutorId").value
+    })
+  }).then(() => cargarLibros());
+}
+
+function buscarLibro() {
+  const nombre = document.getElementById("buscarLibroNombre").value;
+  fetch(API + "/libro/" + nombre).then(r => r.json()).then(data => {
+    document.getElementById("resultadoLibro").innerText = JSON.stringify(data);
+  });
+}
+
+function actualizarLibro() {
+  const id = document.getElementById("updateLibroId").value;
+  fetch(API + "/libro/" + id, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      Nombre: document.getElementById("updateLibroNombre").value,
+      Paginas: document.getElementById("updateLibroPaginas").value,
+      autor_id: document.getElementById("updateLibroAutorId").value
+    })
+  }).then(() => cargarLibros());
+}
+
+function eliminarLibro() {
+  const id = document.getElementById("deleteLibroId").value;
+  fetch(API + "/libro/" + id, { method: "DELETE" }).then(() => cargarLibros());
+}
+
+cargarAutores();
+cargarLibros();
+</script>
+
+
+<hr>
+<h2>Backup / referencia (Laravel + este proyecto) — comandos, migraciones, modelos, rutas y controllers</h2>
+<pre><code id="backupCode1" class="language-php"></code></pre>
+
+<script type="text/plain" id="backupSrc1">
+======================================================================
+BACKUP BACKEND (por si se cae internet) - Proyecto actual (Autor / Libro)
+======================================================================
+
+COMANDOS PARA LEVANTAR TODO DESDE CERO
+----------------------------------------------------------------------
+
+composer create-project laravel/laravel practica
+cd practica
+
+-- Generar modelo + migracion + controller de una:
+php artisan make:model Autor -mcr
+php artisan make:model Libro -mcr
+
+-- Si routes/api.php no existe (Laravel 11/12):
+php artisan install:api
+
+-- Migrar:
+php artisan migrate
+
+-- Levantar servidor:
+php artisan serve
+
+
+MIGRACION: database/migrations/..._create_autors_table.php
+----------------------------------------------------------------------
+public function up(): void
+{
+    Schema::create('autors', function (Blueprint $table) {
+        $table->id();
+        $table->string("Nombre");
+        $table->string("Apellido");
+        $table->string("Telefono");
+        $table->timestamps();
+    });
+}
+
+
+MIGRACION: database/migrations/..._create_libros_table.php
+----------------------------------------------------------------------
+public function up(): void
+{
+    Schema::create('libros', function (Blueprint $table) {
+        $table->id();
+        $table->string("Nombre");
+        $table->integer("Paginas");
+        $table->foreignId("autor_id")->constrained()->onDelete('cascade');
+        $table->timestamps();
+    });
+}
+
+
+MODELO: app/Models/Autor.php
+----------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Autor extends Model
+{
+    protected $fillable = ["Nombre","Apellido","Telefono"];
+
+    public function libros(){
+        return $this->hasMany(Libro::class);
+    }
+}
+
+
+MODELO: app/Models/Libro.php
+----------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Libro extends Model
+{
+    protected $fillable = ["Nombre","Paginas","autor_id"];
+
+    public function autor(){
+       return $this->belongsTo(Autor::class);
+    }
+}
+
+
+RUTAS: routes/api.php
+----------------------------------------------------------------------
+<?php
+
+use App\Http\Controllers\AutorController;
+use App\Http\Controllers\LibroController;
+use Illuminate\Support\Facades\Route;
+
+//AUTORES
+Route::get('/autor',[AutorController::class,'index']);
+Route::post('/autor',[AutorController::class,'store']);
+Route::get('/autor/{nombre}', [AutorController::class, 'show']);
+Route::delete('/autor/{autor}',[AutorController::class,'destroy']);
+Route::put('/autor/{autor}',[AutorController::class,'update']);
+
+//LIBROS
+Route::get('/libro',[LibroController::class,'index']);
+Route::post('/libro',[LibroController::class,'store']);
+Route::get('/libro/{nombre}',[LibroController::class,'show']);
+Route::put('/libro/{libro}',[LibroController::class,'update']);
+Route::delete('/libro/{libro}',[LibroController::class,'destroy']);
+
+
+CONTROLLER: app/Http/Controllers/AutorController.php
+----------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Autor;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class AutorController extends Controller
+{
+    // GET /autor
+    public function index()
+    {
+        $autores = Autor::all();
+        return response()->json($autores);
+    }
+
+    // POST /autor
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => 'required',
+            "Apellido" => 'required',
+            "Telefono" => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                "message" => "Error al crear un autor",
+                "errors" => $validator->errors(),
+                "status" => 400
+            ], 400);
+        }
+
+        $autor = Autor::create([
+            "Nombre" => $request->Nombre,
+            "Apellido" => $request->Apellido,
+            "Telefono" => $request->Telefono,
+        ]);
+
+        return response()->json(["autor" => $autor, "status" => 201], 201);
+    }
+
+    // GET /autor/{nombre}
+    public function show($nombre)
+    {
+        $autores = Autor::where('Nombre', $nombre)->first();
+
+        if (!$autores) {
+            return response()->json(['message' => 'Error no se encontro al autor', 'status' => 404], 404);
+        }
+
+        return response()->json(['autores' => $autores, 'status' => 200], 200);
+    }
+
+    // PUT /autor/{autor}
+    public function update(Request $request, Autor $autor)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => 'required',
+            "Apellido" => 'required',
+            "Telefono" => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "message" => "Error al validar los datos",
+                "errors" => $validator->errors(),
+                "status" => 401
+            ], 401);
+        }
+
+        $autor->Nombre = $request->Nombre;
+        $autor->Apellido = $request->Apellido;
+        $autor->Telefono = $request->Telefono;
+        $autor->save();
+
+        return response()->json(["message" => "Autor actualizado", "autores" => $autor, "status" => 201], 201);
+    }
+
+    // DELETE /autor/{autor}
+    public function destroy(Autor $autor)
+    {
+        $autor->delete();
+        return response()->json(["message" => "Autor eliminado correctamente", "status" => 204], 204);
+    }
+}
+
+
+CONTROLLER: app/Http/Controllers/LibroController.php
+----------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Autor;
+use App\Models\Libro;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class LibroController extends Controller
+{
+    // GET /libro
+    public function index()
+    {
+        $libro = Libro::all();
+        return response()->json(["libro" => $libro, "status" => 200], 200);
+    }
+
+    // POST /libro
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => "required",
+            "Paginas" => "required",
+            "autor_id" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(["message" => "Error al validar los datos", "errors" => $validator->errors(), "status" => 401], 401);
+        }
+
+        $autor = Autor::find($request->autor_id);
+        if (!$autor) {
+            return response()->json(["message" => "El autor no existe", "status" => 404], 404);
+        }
+
+        $libro = Libro::create([
+            "Nombre" => $request->Nombre,
+            "Paginas" => $request->Paginas,
+            "autor_id" => $request->autor_id,
+        ]);
+
+        return response()->json(["message" => "Libro creado correctamente", "libros" => $libro, "status" => 201], 201);
+    }
+
+    // GET /libro/{nombre}
+    public function show($nombre)
+    {
+        $libro = Libro::where("Nombre", $nombre)->first();
+
+        if (!$libro) {
+            return response()->json(["message" => "Libro no encontrado", "status" => 404], 404);
+        }
+
+        return response()->json(["libros" => $libro, "status" => 200], 200);
+    }
+
+    // PUT /libro/{libro}
+    public function update(Request $request, Libro $libro)
+    {
+        $validator = Validator::make($request->all(), [
+            "Nombre" => "required",
+            "Paginas" => "required",
+            "autor_id" => "required",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(["message" => "Error al validar los datos", "errors" => $validator->errors(), "status" => 400], 400);
+        }
+
+        $autor = Autor::find($request->autor_id);
+        if (!$autor) {
+            return response()->json(["message" => "El autor no existe", "status" => 400], 400);
+        }
+
+        $libro->Nombre = $request->Nombre;
+        $libro->Paginas = $request->Paginas;
+        $libro->autor_id = $request->autor_id;
+        $libro->save();
+
+        return response()->json(["message" => "Libro actualizado correctamente", "libros" => $libro, "status" => 200], 200);
+    }
+
+    // DELETE /libro/{libro}
+    public function destroy(Libro $libro)
+    {
+        $libro->delete();
+        return response()->json(["message" => "Libro eliminado correctamente", "libro" => $libro, "status" => 204], 204);
+    }
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+document.getElementById("backupCode1").innerHTML = escapeHtml(document.getElementById("backupSrc1").textContent.trim());
+hljs.highlightElement(document.getElementById("backupCode1"));
+</script>
+
+</body>
+</html>

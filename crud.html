@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+ <!--src="https://code.jquery.com/jquery-3.7.1.min.js"> -->
+<title>CRUD</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+<style>
+table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+pre { padding: 12px; border-radius: 6px; overflow-x: auto; }
+</style>
+</head>
+<body>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+<h3>Crear categoria</h3>
+<input id="catNombre" placeholder="nombre">
+<button onclick="crearCategoria()">Crear</button>
+ 
+<h3>Categorias</h3>
+<table id="tabla">
+<tr><th>ID</th><th>Nombre</th><th>Productos</th></tr>
+</table>
+ 
+<h3>Crear producto</h3>
+<input id="prodNombre" placeholder="nombre">
+<input id="prodPrecio" placeholder="precio">
+<input id="prodCategoriaId" placeholder="categoria_id">
+<button onclick="crearProducto()">Crear</button>
+ 
+<h3>Buscar producto por nombre</h3>
+<input id="buscarNombre" placeholder="nombre">
+<button onclick="buscarProducto()">Buscar</button>
+<p id="resultado"></p>
+ 
+<h3>Eliminar producto</h3>
+<input id="deleteId" placeholder="id">
+<button onclick="eliminarProducto()">Eliminar</button>
+ 
+<script>
+const API = "http://127.0.0.1:8000/api";
+ 
+function cargarCategorias() {
+  fetch(API + "/categorias").then(r => r.json()).then(data => {
+    const tabla = document.getElementById("tabla");
+    tabla.innerHTML = "<tr><th>ID</th><th>Nombre</th><th>Productos</th></tr>";
+    data.forEach(cat => {
+      const productos = cat.productos.map(p => p.nombre).join(", ");
+      tabla.innerHTML += "<tr><td>" + cat.id + "</td><td>" + cat.nombre + "</td><td>" + productos + "</td></tr>";
+    });
+  });
+}
+ 
+function crearCategoria() {
+  fetch(API + "/categorias", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ nombre: document.getElementById("catNombre").value })
+  }).then(() => cargarCategorias());
+}
+ 
+function crearProducto() {
+  fetch(API + "/productos", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      nombre: document.getElementById("prodNombre").value,
+      precio: document.getElementById("prodPrecio").value,
+      categoria_id: document.getElementById("prodCategoriaId").value
+    })
+  }).then(() => cargarCategorias());
+}
+ 
+function buscarProducto() {
+  const nombre = document.getElementById("buscarNombre").value;
+  fetch(API + "/productos?nombre=" + nombre).then(r => r.json()).then(data => {
+    document.getElementById("resultado").innerText = JSON.stringify(data);
+  });
+}
+ 
+function eliminarProducto() {
+  const id = document.getElementById("deleteId").value;
+  fetch(API + "/productos/" + id, { method: "DELETE" }).then(() => cargarCategorias());
+}
+ 
+cargarCategorias();
+</script>
+ 
+ 
+<hr>
+<h2>Backup / referencia (Laravel + MySQL) — comandos, migraciones, modelos, rutas y controllers</h2>
+<pre><code id="backupCode1" class="language-php"></code></pre>
+ 
+<h2>Version alterna con jQuery / AJAX (reemplazo linea por linea)</h2>
+<pre><code id="backupCode2" class="language-javascript"></code></pre>
+ 
+<script type="text/plain" id="backupSrc1">
+======================================================================
+BACKUP BACKEND (por si se cae internet) - Laravel + MySQL (XAMPP)
+======================================================================
+ 
+COMANDOS PARA LEVANTAR TODO DESDE CERO
+----------------------------------------------------------------------
+ 
+composer create-project laravel/laravel apiTienda
+cd apiTienda
+ 
+-- Crear BD en MySQL (con XAMPP corriendo):
+mysql -u root -e "CREATE DATABASE api_tienda"
+ 
+-- En .env poner:
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=api_tienda
+DB_USERNAME=root
+DB_PASSWORD=
+ 
+-- Generar modelo + migracion + controller de una:
+php artisan make:model Categoria -mcr --api
+php artisan make:model Producto -mcr --api
+ 
+-- Borrar migraciones que no se usan:
+rm database/migrations/0001_01_01_000000_create_users_table.php
+rm database/migrations/0001_01_01_000001_create_cache_table.php
+rm database/migrations/0001_01_01_000002_create_jobs_table.php
+ 
+-- Si routes/api.php no existe (Laravel 11/12):
+php artisan install:api
+ 
+-- Migrar:
+php artisan migrate
+ 
+-- Levantar servidor:
+php artisan serve
+ 
+ 
+MIGRACION: database/migrations/..._create_categorias_table.php
+----------------------------------------------------------------------
+public function up(): void
+{
+    Schema::create('categorias', function (Blueprint $table) {
+        $table->id();
+        $table->string('nombre');
+        $table->timestamps();
+    });
+}
+ 
+ 
+MIGRACION: database/migrations/..._create_productos_table.php
+----------------------------------------------------------------------
+public function up(): void
+{
+    Schema::create('productos', function (Blueprint $table) {
+        $table->id();
+        $table->string('nombre');
+        $table->decimal('precio', 10, 2);
+        $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade');
+        $table->timestamps();
+    });
+}
+ 
+ 
+MODELO: app/Models/Categoria.php
+----------------------------------------------------------------------
+<?php
+ 
+namespace App\Models;
+ 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+ 
+class Categoria extends Model
+{
+    use HasFactory;
+ 
+    protected $fillable = ['nombre'];
+ 
+    public function productos()
+    {
+        return $this->hasMany(Producto::class);
+    }
+}
+ 
+ 
+MODELO: app/Models/Producto.php
+----------------------------------------------------------------------
+<?php
+ 
+namespace App\Models;
+ 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+ 
+class Producto extends Model
+{
+    use HasFactory;
+ 
+    protected $fillable = ['nombre', 'precio', 'categoria_id'];
+ 
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
+    }
+}
+ 
+ 
+RUTAS: routes/api.php
+----------------------------------------------------------------------
+<?php
+ 
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ProductoController;
+ 
+Route::get('/categorias', [CategoriaController::class, 'index']);
+Route::post('/categorias', [CategoriaController::class, 'store']);
+Route::get('/categorias/{id}/productos', [CategoriaController::class, 'productos']);
+ 
+Route::post('/productos', [ProductoController::class, 'store']);
+Route::get('/productos', [ProductoController::class, 'show']);
+Route::delete('/productos/{id}', [ProductoController::class, 'destroy']);
+ 
+ 
+CONTROLLER: app/Http/Controllers/CategoriaController.php
+----------------------------------------------------------------------
+<?php
+ 
+namespace App\Http\Controllers;
+ 
+use App\Models\Categoria;
+use Illuminate\Http\Request;
+ 
+class CategoriaController extends Controller
+{
+    // GET /categorias
+    public function index()
+    {
+        $categorias = Categoria::with('productos')->get();
+        return response()->json($categorias);
+    }
+ 
+    // POST /categorias
+    public function store(Request $request)
+    {
+        $categoria = Categoria::create([
+            'nombre' => $request->nombre,
+        ]);
+ 
+        return response()->json($categoria, 201);
+    }
+ 
+    // GET /categorias/{id}/productos
+    public function productos($id)
+    {
+        $categoria = Categoria::find($id);
+ 
+        if (!$categoria) {
+            return response()->json(['message' => 'Categoria no encontrada'], 404);
+        }
+ 
+        return response()->json($categoria->productos);
+    }
+}
+ 
+ 
+CONTROLLER: app/Http/Controllers/ProductoController.php
+----------------------------------------------------------------------
+<?php
+ 
+namespace App\Http\Controllers;
+ 
+use App\Models\Producto;
+use Illuminate\Http\Request;
+ 
+class ProductoController extends Controller
+{
+    // POST /productos
+    public function store(Request $request)
+    {
+        $request->validate([
+            'categoria_id' => 'required|exists:categorias,id',
+        ]);
+ 
+        $producto = Producto::create([
+            'nombre' => $request->nombre,
+            'precio' => $request->precio,
+            'categoria_id' => $request->categoria_id,
+        ]);
+ 
+        return response()->json($producto, 201);
+    }
+ 
+    // GET /productos?nombre=algo
+    public function show(Request $request)
+    {
+        $nombre = $request->query('nombre');
+ 
+        $producto = Producto::with('categoria')->where('nombre', $nombre)->first();
+ 
+        if (!$producto) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
+        }
+ 
+        return response()->json($producto);
+    }
+ 
+    // DELETE /productos/{id}
+    public function destroy($id)
+    {
+        $producto = Producto::find($id);
+ 
+        if (!$producto) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
+        }
+ 
+        $producto->delete();
+ 
+        return response()->json(['message' => 'Producto eliminado correctamente']);
+    }
+}
+</script>
+ 
+<script type="text/plain" id="backupSrc2">
+======================================================================
+VERSION CON jQuery / AJAX (por si el profesor pide jQuery en vez de fetch)
+======================================================================
+ 
+1) En el head, agregar el CDN de jQuery:
+ 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+ 
+ 
+2) Reemplazar la funcion cargarCategorias por:
+ 
+function cargarCategorias() {
+  $.get(API + "/categorias", function(data) {
+    let filas = "<tr><th>ID</th><th>Nombre</th><th>Productos</th></tr>";
+    data.forEach(function(cat) {
+      const productos = cat.productos.map(p => p.nombre).join(", ");
+      filas += "<tr><td>" + cat.id + "</td><td>" + cat.nombre + "</td><td>" + productos + "</td></tr>";
+    });
+    $("#tabla").html(filas);
+  });
+}
+ 
+ 
+3) Reemplazar la funcion crearCategoria por:
+ 
+function crearCategoria() {
+  $.ajax({
+    url: API + "/categorias",
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({ nombre: $("#catNombre").val() }),
+    success: function() { cargarCategorias(); }
+  });
+}
+ 
+ 
+4) Reemplazar la funcion crearProducto por:
+ 
+function crearProducto() {
+  $.ajax({
+    url: API + "/productos",
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({
+      nombre: $("#prodNombre").val(),
+      precio: $("#prodPrecio").val(),
+      categoria_id: $("#prodCategoriaId").val()
+    }),
+    success: function() { cargarCategorias(); }
+  });
+}
+ 
+ 
+5) Reemplazar la funcion buscarProducto por:
+ 
+function buscarProducto() {
+  const nombre = $("#buscarNombre").val();
+  $.get(API + "/productos", { nombre: nombre }, function(data) {
+    $("#resultado").text(JSON.stringify(data));
+  });
+}
+ 
+ 
+6) Reemplazar la funcion eliminarProducto por:
+ 
+function eliminarProducto() {
+  const id = $("#deleteId").val();
+  $.ajax({
+    url: API + "/productos/" + id,
+    method: "DELETE",
+    success: function() { cargarCategorias(); }
+  });
+}
+</script>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+document.getElementById("backupCode1").innerHTML = escapeHtml(document.getElementById("backupSrc1").textContent.trim());
+document.getElementById("backupCode2").innerHTML = escapeHtml(document.getElementById("backupSrc2").textContent.trim());
+hljs.highlightElement(document.getElementById("backupCode1"));
+hljs.highlightElement(document.getElementById("backupCode2"));
+</script>
+ 
+</body>
+</html>
+ 
