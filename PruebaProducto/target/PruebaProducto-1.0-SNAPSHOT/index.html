@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Pedidos</title>
+    <!-- jQuery para AJAX -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h2>REGISTRAR NUEVO PEDIDO</h2>
+    <form id="formPedido">
+        <label>Cédula Cliente:</label>
+        <input type="text" id="txtCedulaPedido"><br><br>
+
+        <label>Producto:</label>
+        <select id="cmbProductos">
+            <option value="">Cargando...</option>
+        </select><br><br>
+
+        <button type="button" onclick="guardarPedido()">Registrar Pedido</button>
+    </form>
+
+    <hr>
+
+    <h2>CONSULTAR CLIENTES Y PEDIDOS</h2>
+    <label>Buscar por Cédula:</label>
+    <input type="text" id="txtBuscarCedula">
+    <button type="button" onclick="buscarCliente()">Buscar</button>
+    <button type="button" onclick="cargarClientes()">Listar Todos</button>
+
+    <h3>Lista de Clientes</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Cédula</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tblClientes"></tbody>
+    </table>
+
+    <h3>Pedidos del Cliente</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Producto</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody id="tblPedidos"></tbody>
+    </table>
+
+    <!-- JAVASCRIPT / AJAX DIRECTO -->
+    <script>
+        const URL = 'PedidoServlet';
+
+        $(document).ready(function() {
+            cargarClientes();
+            cargarProductos();
+        });
+
+        // 1. Cargar productos en el combo
+        function cargarProductos() {
+            $.get(URL, { accion: 'listarProductos' }, function(productos) {
+                let cmb = $('#cmbProductos');
+                cmb.empty();
+                cmb.append('<option value="">-- Seleccione --</option>');
+                productos.forEach(p => {
+                    cmb.append(`<option value="${p.id}">${p.nombre}</option>`);
+                });
+            }, 'json');
+        }
+
+        // 2. Cargar todos los clientes
+        function cargarClientes() {
+            $.get(URL, { accion: 'listarClientes' }, function(clientes) {
+                mostrarClientes(clientes);
+            }, 'json');
+        }
+
+        // 3. Buscar cliente por cédula
+        function buscarCliente() {
+            let ced = $('#txtBuscarCedula').val();
+            if (!ced) return cargarClientes();
+
+            $.get(URL, { accion: 'buscarCliente', cedula: ced }, function(c) {
+                if (c) {
+                    mostrarClientes([c]);
+                } else {
+                    alert('Cliente no encontrado');
+                }
+            }, 'json');
+        }
+
+        function mostrarClientes(lista) {
+            let tbody = $('#tblClientes');
+            tbody.empty();
+            lista.forEach(c => {
+                tbody.append(`
+                    <tr>
+                        <td>${c.cedula}</td>
+                        <td>${c.nombre}</td>
+                        <td>${c.apellido}</td>
+                        <td>
+                            <button type="button" onclick="verPedidos('${c.cedula}')">Ver Pedidos</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        // 4. Guardar pedido
+        function guardarPedido() {
+            let ced = $('#txtCedulaPedido').val();
+            let prod = $('#cmbProductos').val();
+
+            if (!ced || !prod) {
+                alert('Complete los campos');
+                return;
+            }
+
+            $.post(URL, { cedula: ced, idProducto: prod }, function(res) {
+                if (res.status === 'ok') {
+                    alert('Pedido guardado');
+                    $('#txtCedulaPedido').val('');
+                    verPedidos(ced);
+                } else {
+                    alert('Error al guardar');
+                }
+            }, 'json');
+        }
+
+        // 5. Ver pedidos del cliente
+        function verPedidos(cedula) {
+            $.get(URL, { accion: 'listarPedidos', cedula: cedula }, function(pedidos) {
+                let tbody = $('#tblPedidos');
+                tbody.empty();
+                if (pedidos.length === 0) {
+                    tbody.append('<tr><td colspan="4">Sin pedidos</td></tr>');
+                } else {
+                    pedidos.forEach(p => {
+                        tbody.append(`
+                            <tr>
+                                <td>${p.id}</td>
+                                <td>${p.nombreCliente}</td>
+                                <td>${p.nombreProducto}</td>
+                                <td>${p.fecha}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            }, 'json');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+com\mycompany\pruebaproducto\resources\JakartaEE10Resource.class
+Servicios\Cliente.class
+Conexion\conexion.class
+Servicios\PedidoServlet.class
+com\mycompany\pruebaproducto\JakartaRestConfiguration.class
+Servicios\Producto.class
+Dao\PedidoDAO.class
+Servicios\Pedido.class
