@@ -1,0 +1,7 @@
+Conexion\conexion.class
+com\mycompany\prueba\resources\JakartaEE10Resource.class
+Servicios\Libro.class
+com\mycompany\prueba\JakartaRestConfiguration.class
+Dao\BibliotecaDAO.class
+Servicios\BibliotecaServlet.class
+Servicios\Autor.class

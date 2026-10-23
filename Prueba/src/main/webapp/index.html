@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Biblioteca</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h2>GESTA DE AUTORES Y LIBROS</h2>
+
+    <!-- SECCIÓN AUTORES -->
+    <fieldset id="secAutor">
+        <legend>Gestión de Autores</legend>
+        <input type="hidden" id="txtAutorId">
+        <label>Nombre:</label>
+        <input type="text" id="txtAutorNombre"><br><br>
+        <label>Correo:</label>
+        <input type="text" id="txtAutorCorreo"><br><br>
+        <button type="button" onclick="guardarAutor()">Guardar Autor</button>
+        <button type="button" onclick="limpiarAutor()">Limpiar</button>
+
+        <br><br>
+        <button type="button" onclick="cargarAutores()">Listar Autores</button>
+        <br><br>
+
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tblAutores"></tbody>
+        </table>
+
+        <br>
+        <h3>Buscar Libros por Nombre de Autor</h3>
+        <input type="text" id="txtBuscarAutorNombre" placeholder="Nombre del autor">
+        <button type="button" onclick="buscarLibrosPorAutor()">Buscar Libros</button>
+    </fieldset>
+
+    <br><hr><br>
+
+    <!-- SECCIÓN LIBROS -->
+    <fieldset id="secLibro">
+        <legend>Gestión de Libros</legend>
+        <input type="hidden" id="txtLibroId">
+        <label>Título:</label>
+        <input type="text" id="txtLibroTitulo"><br><br>
+        <label>Año Publicación:</label>
+        <input type="number" id="txtLibroAnio"><br><br>
+        <label>Autor:</label>
+        <select id="cmbAutores">
+            <option value="">Cargando autores...</option>
+        </select><br><br>
+        <button type="button" onclick="guardarLibro()">Guardar Libro</button>
+        <button type="button" onclick="limpiarLibro()">Limpiar</button>
+
+        <br><br>
+        <button type="button" onclick="cargarLibros()">Listar Todos los Libros</button>
+        <br><br>
+
+        <h3>Buscar Libro por Título</h3>
+        <input type="text" id="txtBuscarLibroTitulo" placeholder="Título del libro">
+        <button type="button" onclick="buscarLibroPorTitulo()">Buscar Libro</button>
+        <br><br>
+
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Año</th>
+                    <th>Autor</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tblLibros"></tbody>
+        </table>
+    </fieldset>
+
+    <!-- JAVASCRIPT / AJAX -->
+    <script>
+        const URL = 'BibliotecaServlet';
+
+        $(document).ready(function() {
+            cargarAutores();
+            cargarLibros();
+        });
+
+        // --- FUNCIONES AUTOR ---
+
+        function cargarAutores() {
+            $.get(URL, { accion: 'listarAutores' }, function(autores) {
+                let tbody = $('#tblAutores');
+                let cmb = $('#cmbAutores');
+                tbody.empty();
+                cmb.empty();
+                cmb.append('<option value="">-- Seleccione un Autor --</option>');
+
+                autores.forEach(a => {
+                    // Carga la tabla de autores
+                    tbody.append(`
+                        <tr>
+                            <td>${a.id}</td>
+                            <td>${a.nombre}</td>
+                            <td>${a.correo}</td>
+                            <td>
+                                <button type="button" onclick="editarAutor(${a.id}, '${a.nombre}', '${a.correo}')">Editar</button>
+                            </td>
+                        </tr>
+                    `);
+                    // Carga el combo para seleccionar autor en el formulario de libro
+                    cmb.append(`<option value="${a.id}">${a.nombre}</option>`);
+                });
+            }, 'json');
+        }
+
+        function guardarAutor() {
+            let id = $('#txtAutorId').val();
+            let nombre = $('#txtAutorNombre').val();
+            let correo = $('#txtAutorCorreo').val();
+
+            if (!nombre || !correo) return alert('Complete todos los campos del autor');
+
+            let acc = id ? 'actualizarAutor' : 'crearAutor';
+
+            $.post(URL, { accion: acc, id: id, nombre: nombre, correo: correo }, function(res) {
+                if (res.status === 'ok') {
+                    alert('Autor procesado con éxito');
+                    limpiarAutor();
+                    cargarAutores();
+                } else alert('Error al guardar autor');
+            }, 'json');
+        }
+
+        function editarAutor(id, nombre, correo) {
+            $('#txtAutorId').val(id);
+            $('#txtAutorNombre').val(nombre);
+            $('#txtAutorCorreo').val(correo);
+        }
+
+        function limpiarAutor() {
+            $('#txtAutorId').val('');
+            $('#txtAutorNombre').val('');
+            $('#txtAutorCorreo').val('');
+        }
+
+        function buscarLibrosPorAutor() {
+            let nom = $('#txtBuscarAutorNombre').val();
+            if (!nom) return alert('Ingrese el nombre del autor');
+
+            $.get(URL, { accion: 'librosPorAutor', nombreAutor: nom }, function(libros) {
+                mostrarLibrosEnTabla(libros);
+            }, 'json');
+        }
+
+        // --- FUNCIONES LIBRO ---
+
+        function cargarLibros() {
+            $.get(URL, { accion: 'listarLibros' }, function(libros) {
+                mostrarLibrosEnTabla(libros);
+            }, 'json');
+        }
+
+        function buscarLibroPorTitulo() {
+            let tit = $('#txtBuscarLibroTitulo').val();
+            if (!tit) return cargarLibros();
+
+            $.get(URL, { accion: 'buscarLibro', titulo: tit }, function(l) {
+                if (l) {
+                    mostrarLibrosEnTabla([l]);
+                } else {
+                    alert('Libro no encontrado');
+                    $('#tblLibros').empty();
+                }
+            }, 'json');
+        }
+
+        function mostrarLibrosEnTabla(lista) {
+            let tbody = $('#tblLibros');
+            tbody.empty();
+            lista.forEach(l => {
+                tbody.append(`
+                    <tr>
+                        <td>${l.id}</td>
+                        <td>${l.titulo}</td>
+                        <td>${l.anioPublicacion}</td>
+                        <td>${l.nombreAutor}</td>
+                        <td>
+                            <button type="button" onclick="editarLibro(${l.id}, '${l.titulo}', ${l.anioPublicacion}, ${l.autorId})">Editar</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function guardarLibro() {
+            let id = $('#txtLibroId').val();
+            let titulo = $('#txtLibroTitulo').val();
+            let anio = $('#txtLibroAnio').val();
+            let autorId = $('#cmbAutores').val();
+
+            if (!titulo || !anio || !autorId) return alert('Complete los campos del libro');
+
+            let acc = id ? 'actualizarLibro' : 'crearLibro';
+
+            $.post(URL, { accion: acc, id: id, titulo: titulo, anio: anio, autorId: autorId }, function(res) {
+                if (res.status === 'ok') {
+                    alert('Libro procesado con éxito');
+                    limpiarLibro();
+                    cargarLibros();
+                } else alert('Error al guardar libro');
+            }, 'json');
+        }
+
+        function editarLibro(id, titulo, anio, autorId) {
+            $('#txtLibroId').val(id);
+            $('#txtLibroTitulo').val(titulo);
+            $('#txtLibroAnio').val(anio);
+            $('#cmbAutores').val(autorId);
+        }
+
+        function limpiarLibro() {
+            $('#txtLibroId').val('');
+            $('#txtLibroTitulo').val('');
+            $('#txtLibroAnio').val('');
+            $('#cmbAutores').val('');
+        }
+    </script>
+</body>
+</html>
