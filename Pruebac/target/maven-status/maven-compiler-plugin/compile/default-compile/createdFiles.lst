@@ -1,0 +1,7 @@
+Servicios\Categoria.class
+com\mycompany\pruebac\resources\JakartaEE10Resource.class
+Conexion\conexion.class
+Servicios\TiendaServlet.class
+Servicios\Producto.class
+Dao\TiendaDAO.class
+com\mycompany\pruebac\JakartaRestConfiguration.class

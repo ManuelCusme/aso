@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Tienda</title>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h2>Gestión de Categorías y Productos</h2>
+
+    <!-- FORMULARIO DE CATEGORÍA -->
+    <fieldset>
+        <legend>Nueva Categoría</legend>
+        <label>Nombre:</label>
+        <input type="text" id="txtCatNombre">
+        <button type="button" onclick="crearCategoria()">Guardar</button>
+    </fieldset>
+
+    <br>
+
+    <!-- FORMULARIO DE PRODUCTO -->
+    <fieldset>
+        <legend>Nuevo Producto</legend>
+        <label>Nombre:</label>
+        <input type="text" id="txtProdNombre"><br><br>
+        <label>Precio:</label>
+        <input type="number" step="0.01" id="txtProdPrecio"><br><br>
+        <label>ID Categoría:</label>
+        <input type="number" id="txtProdIdCat"><br><br>
+        <button type="button" onclick="crearProducto()">Guardar Producto</button>
+    </fieldset>
+
+    <br>
+
+    <!-- CONSULTAS Y TABLAS -->
+    <button type="button" onclick="cargarCategorias()">Listar Categorías</button>
+    <br><br>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID Categoría</th>
+                <th>Nombre Categoría</th>
+                <th>Productos Asociados</th>
+            </tr>
+        </thead>
+        <tbody id="tblCategorias"></tbody>
+    </table>
+
+    <br><hr><br>
+
+    <h3>Buscar Productos por Categoría</h3>
+    <input type="text" id="txtBuscarCatNombre" placeholder="Nombre de categoría">
+    <button type="button" onclick="buscarPorCategoria()">Buscar</button>
+    
+    <br><br>
+
+    <h3>Buscar / Eliminar Producto</h3>
+    <input type="text" id="txtBuscarProdNombre" placeholder="Nombre del producto">
+    <button type="button" onclick="buscarProducto()">Buscar Producto</button>
+
+    <br><br>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th>Categoría</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tblProductos"></tbody>
+    </table>
+
+    <!-- JAVASCRIPT / AJAX -->
+    <script>
+        const URL = 'TiendaServlet';
+
+        // 1. Cargar Categorías en la tabla normal
+        function cargarCategorias() {
+            $.get(URL, { accion: 'categorias' }, function(cats) {
+                let tbody = $('#tblCategorias');
+                tbody.empty();
+                
+                cats.forEach(c => {
+                    // Mapeamos los nombres de los productos separados por coma
+                    let listaNombres = c.productos.map(p => p.nombre).join(', ');
+                    if (!listaNombres) listaNombres = 'Sin productos';
+
+                    tbody.append(`
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.nombre}</td>
+                            <td>${listaNombres}</td>
+                        </tr>
+                    `);
+                });
+            }, 'json');
+        }
+
+        // 2. Crear Categoría
+        function crearCategoria() {
+            let nom = $('#txtCatNombre').val();
+            if(!nom) return alert('Ingrese el nombre');
+
+            $.post(URL, { accion: 'crearCategoria', nombre: nom }, function(res) {
+                if (res.status === 'ok') {
+                    alert('Categoría guardada con éxito');
+                    $('#txtCatNombre').val('');
+                    cargarCategorias();
+                } else {
+                    alert('Error al guardar la categoría');
+                }
+            }, 'json');
+        }
+
+        // 3. Crear Producto (validando categoría en el backend)
+        function crearProducto() {
+            let nom = $('#txtProdNombre').val();
+            let prec = $('#txtProdPrecio').val();
+            let idCat = $('#txtProdIdCat').val();
+
+            if(!nom || !prec || !idCat) return alert('Complete todos los campos');
+
+            $.post(URL, {
+                accion: 'crearProducto',
+                nombre: nom,
+                precio: prec,
+                idCategoria: idCat
+            }, function(res) {
+                if (res.status === 'ok') {
+                    alert('Producto guardado correctamente');
+                    $('#txtProdNombre').val('');
+                    $('#txtProdPrecio').val('');
+                    $('#txtProdIdCat').val('');
+                } else {
+                    alert('Error: La categoría no existe');
+                }
+            }, 'json');
+        }
+
+        // 4. Buscar productos por nombre de categoría
+        function buscarPorCategoria() {
+            let nomCat = $('#txtBuscarCatNombre').val();
+            if(!nomCat) return alert('Escriba el nombre de la categoría');
+
+            $.get(URL, { accion: 'productosPorCategoria', nombreCat: nomCat }, function(prods) {
+                let tbody = $('#tblProductos');
+                tbody.empty();
+                
+                if (prods.length === 0) {
+                    alert('No se encontraron productos para esa categoría');
+                    return;
+                }
+
+                prods.forEach(p => {
+                    tbody.append(`
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.nombre}</td>
+                            <td>$${p.precio}</td>
+                            <td>${nomCat}</td>
+                            <td><button type="button" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
+                        </tr>
+                    `);
+                });
+            }, 'json');
+        }
+
+        // 5. Buscar producto por su nombre
+        function buscarProducto() {
+            let nom = $('#txtBuscarProdNombre').val();
+            if(!nom) return alert('Escriba el nombre del producto');
+
+            $.get(URL, { accion: 'buscarProducto', nombre: nom }, function(p) {
+                let tbody = $('#tblProductos');
+                tbody.empty();
+                
+                if (p) {
+                    tbody.append(`
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.nombre}</td>
+                            <td>$${p.precio}</td>
+                            <td>${p.nombreCategoria}</td>
+                            <td><button type="button" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
+                        </tr>
+                    `);
+                } else {
+                    alert('Producto no encontrado');
+                }
+            }, 'json');
+        }
+
+        // 6. Eliminar Producto por ID
+        function eliminarProducto(id) {
+            if (confirm('¿Desea eliminar este producto?')) {
+                $.post(URL, { accion: 'eliminarProducto', id: id }, function(res) {
+                    if (res.status === 'ok') {
+                        alert('Producto eliminado');
+                        $('#tblProductos').empty();
+                    } else {
+                        alert('Error al eliminar');
+                    }
+                }, 'json');
+            }
+        }
+    </script>
+</body>
+</html>
