@@ -1,0 +1,305 @@
+package Dao;
+
+import Conexion.conexion;
+import Servicios.Entidad; // Cambia 'Entidad' por el nombre de tu clase
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MiDAO {
+
+    // 1. LISTAR TODOS
+    public List<Entidad> listar() throws Exception {
+        List<Entidad> lista = new ArrayList<>();
+        String sql = "SELECT * FROM tabla"; // Cambia 'tabla'
+        try (Connection con = conexion.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new Entidad(
+                    rs.getString("campo1"), // Cambia por tus columnas
+                    rs.getString("campo2"),
+                    rs.getString("campo3")
+                ));
+            }
+        }
+        return lista;
+    }
+
+    // 2. BUSCAR POR ID / CLAVE
+    public Entidad buscar(String id) throws Exception {
+        String sql = "SELECT * FROM tabla WHERE campo1 = ?"; // Cambia 'tabla' y 'campo1'
+        try (Connection con = conexion.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Entidad(
+                        rs.getString("campo1"),
+                        rs.getString("campo2"),
+                        rs.getString("campo3")
+                    );
+                }
+            }
+        }
+        return null;
+    }
+
+    // 3. INSERTAR / GUARDAR
+    public boolean insertar(Entidad obj) throws Exception {
+        String sql = "INSERT INTO tabla (campo1, campo2, campo3) VALUES (?, ?, ?)";
+        try (Connection con = conexion.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, obj.getCampo1());
+            ps.setString(2, obj.getCampo2());
+            ps.setString(3, obj.getCampo3());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // 4. ACTUALIZAR / EDITAR
+    public boolean actualizar(Entidad obj) throws Exception {
+        String sql = "UPDATE tabla SET campo2 = ?, campo3 = ? WHERE campo1 = ?";
+        try (Connection con = conexion.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, obj.getCampo2());
+            ps.setString(2, obj.getCampo3());
+            ps.setString(3, obj.getCampo1()); // La clave va al final por el WHERE
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // 5. ELIMINAR
+    public boolean eliminar(String id) throws Exception {
+        String sql = "DELETE FROM tabla WHERE campo1 = ?";
+        try (Connection con = conexion.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+}
+=====================================
+package Servicios;
+
+import Dao.MiDAO;
+import com.google.gson.Gson;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Collections;
+
+@WebServlet("/MiServlet") // Cambia el nombre de la URL
+public class MiServlet extends HttpServlet {
+    private final MiDAO dao = new MiDAO();
+    private final Gson gson = new Gson();
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String accion = request.getParameter("accion");
+        if (accion == null) accion = "listar";
+
+        Object res = null;
+        try {
+            switch (accion) {
+                case "listar":
+                    res = dao.listar();
+                    break;
+                case "buscar":
+                    res = dao.buscar(request.getParameter("id"));
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        responder(response, res);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        request.setCharacterEncoding("UTF-8");
+        String accion = request.getParameter("accion");
+        boolean ok = false;
+
+        try {
+            // Creamos el objeto leyendo los inputs del frontend
+            Entidad obj = new Entidad(
+                request.getParameter("campo1"),
+                request.getParameter("campo2"),
+                request.getParameter("campo3")
+            );
+
+            switch (accion) {
+                case "guardar":
+                    ok = dao.insertar(obj);
+                    break;
+                case "editar":
+                    ok = dao.actualizar(obj);
+                    break;
+                case "eliminar":
+                    ok = dao.eliminar(request.getParameter("campo1"));
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        responder(response, Collections.singletonMap("status", ok ? "ok" : "error"));
+    }
+
+    private void responder(HttpServletResponse response, Object datos) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(gson.toJson(datos));
+    }
+}
+======================================
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mantenimiento</title>
+    <!-- LIBRERÍA JQUERY INCLUIDA VIA CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h2>FORMULARIO</h2>
+    <form id="miForm">
+        <label>Campo 1 (ID):</label>
+        <input type="text" id="c1"><br><br>
+
+        <label>Campo 2:</label>
+        <input type="text" id="c2"><br><br>
+
+        <label>Campo 3:</label>
+        <input type="text" id="c3"><br><br>
+
+        <button type="button" onclick="enviar('guardar')">Guardar</button>
+        <button type="button" onclick="enviar('editar')">Actualizar</button>
+        <button type="button" onclick="limpiar()">Limpiar</button>
+    </form>
+
+    <hr>
+
+    <h2>CONSULTA</h2>
+    <input type="text" id="txtBuscar" placeholder="Buscar por ID">
+    <button type="button" onclick="buscar()">Buscar</button>
+    <button type="button" onclick="listar()">Listar Todos</button>
+
+    <br><br>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Campo 1</th>
+                <th>Campo 2</th>
+                <th>Campo 3</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tblCuerpo"></tbody>
+    </table>
+
+    <script>
+        const URL = 'MiServlet'; // Asegúrate de que coincida con la URL de tu Servlet
+
+        $(document).ready(function() {
+            listar();
+        });
+
+        // 1. LISTAR TODOS
+        function listar() {
+            $.get(URL, { accion: 'listar' }, function(lista) {
+                let tbody = $('#tblCuerpo');
+                tbody.empty();
+                lista.forEach(item => {
+                    tbody.append(`
+                        <tr>
+                            <td>${item.campo1}</td>
+                            <td>${item.campo2}</td>
+                            <td>${item.campo3}</td>
+                            <td>
+                                <button type="button" onclick="cargarParaEditar('${item.campo1}', '${item.campo2}', '${item.campo3}')">Editar</button>
+                                <button type="button" onclick="eliminar('${item.campo1}')">Eliminar</button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }, 'json');
+        }
+
+        // 2. BUSCAR UN REGISTRO
+        function buscar() {
+            let id = $('#txtBuscar').val();
+            if(!id) return listar();
+
+            $.get(URL, { accion: 'buscar', id: id }, function(item) {
+                let tbody = $('#tblCuerpo');
+                tbody.empty();
+                if(item) {
+                    tbody.append(`
+                        <tr>
+                            <td>${item.campo1}</td>
+                            <td>${item.campo2}</td>
+                            <td>${item.campo3}</td>
+                            <td>
+                                <button type="button" onclick="cargarParaEditar('${item.campo1}', '${item.campo2}', '${item.campo3}')">Editar</button>
+                                <button type="button" onclick="eliminar('${item.campo1}')">Eliminar</button>
+                            </td>
+                        </tr>
+                    `);
+                } else {
+                    alert('No encontrado');
+                }
+            }, 'json');
+        }
+
+        // 3. GUARDAR O EDITAR
+        function enviar(accion) {
+            $.post(URL, {
+                accion: accion,
+                campo1: $('#c1').val(),
+                campo2: $('#c2').val(),
+                campo3: $('#c3').val()
+            }, function(res) {
+                if(res.status === 'ok') {
+                    alert('Operación realizada con éxito');
+                    limpiar();
+                    listar();
+                } else {
+                    alert('Error al procesar');
+                }
+            }, 'json');
+        }
+
+        // 4. ELIMINAR
+        function eliminar(id) {
+            if(confirm('¿Eliminar registro ' + id + '?')) {
+                $.post(URL, { accion: 'eliminar', campo1: id }, function(res) {
+                    if(res.status === 'ok') {
+                        listar();
+                    } else {
+                        alert('No se pudo eliminar');
+                    }
+                }, 'json');
+            }
+        }
+
+        // FUNCIONES AUXILIARES
+        function cargarParaEditar(c1, c2, c3) {
+            $('#c1').val(c1);
+            $('#c2').val(c2);
+            $('#c3').val(c3);
+        }
+
+        function limpiar() {
+            $('#c1').val('');
+            $('#c2').val('');
+            $('#c3').val('');
+            $('#txtBuscar').val('');
+        }
+    </script>
+</body>
+</html>
